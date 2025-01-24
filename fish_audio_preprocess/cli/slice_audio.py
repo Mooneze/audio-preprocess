@@ -2,6 +2,7 @@ import os
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
+import audioread.exceptions
 import click
 from loguru import logger
 from tqdm import tqdm
@@ -129,7 +130,12 @@ def slice_audio(
             )
 
         for i in tqdm(as_completed(tasks), total=len(tasks), desc="Processing"):
-            assert i.exception() is None, i.exception()
+            if i.exception() is not None:
+                if i.exception() is audioread.exceptions.NoBackendError:
+                    logger.info(f"Try install ffmpeg.")
+
+                logger.critical(i.exception())
+                raise i.exception()
 
     logger.info("Done!")
     logger.info(f"Total: {len(files)}, Skipped: {skipped}")
